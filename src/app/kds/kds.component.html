@@ -1,0 +1,157 @@
+<div class="p-4 md:p-6">
+  <!-- KDS View -->
+  @if (currentView() === 'kds') {
+    <div class="flex flex-col h-full">
+      <div class="flex justify-end mb-4">
+        <button (click)="currentView.set('recipe_editor')" 
+          class="px-4 py-2 rounded-md font-semibold transition-all duration-200 flex items-center space-x-2 bg-gray-700 hover:bg-gray-600">
+          <span class="material-icons">menu_book</span>
+          <span>Editor de Fichas Técnicas</span>
+        </button>
+      </div>
+      <!-- Tabs for Kitchen/Bar -->
+      <div class="mb-4 flex border-b border-gray-700">
+        <button (click)="activeTab.set(OrderDestination.Kitchen)" [class]="'px-6 py-3 text-lg font-medium transition-colors duration-200 ' + (activeTab() === OrderDestination.Kitchen ? 'border-b-2 border-blue-400 text-blue-300' : 'text-gray-400 hover:text-white')">
+          Cozinha
+        </button>
+        <button (click)="activeTab.set(OrderDestination.Bar)" [class]="'px-6 py-3 text-lg font-medium transition-colors duration-200 ' + (activeTab() === OrderDestination.Bar ? 'border-b-2 border-blue-400 text-blue-300' : 'text-gray-400 hover:text-white')">
+          Bar
+        </button>
+      </div>
+
+      <!-- Orders Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+        @for (order of filteredOrders(); track order.id) {
+          <div [class]="'bg-gray-800 rounded-lg shadow-xl border border-gray-700 flex flex-col overflow-hidden ' + (isNewOrder(order) ? 'animate-new-order-pulse' : '')">
+            <!-- Card Header -->
+            <div class="p-3 bg-gray-700 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">Mesa {{ order.tableNumber }}</h2>
+              <div [class]="'px-3 py-1 rounded-full text-white font-mono text-lg ' + getElapsedTimeColor(order.timestamp)">
+                {{ elapsedTime(order.timestamp) }}
+              </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="p-3 space-y-3 flex-grow">
+              @for (item of order.items; track item.id) {
+                <div [class]="'p-2 rounded border-l-4 ' + getItemStatusColor(item.status)">
+                  <div class="flex justify-between items-start">
+                    <p class="font-bold text-lg">{{ item.quantity }}x {{ item.name }}</p>
+                    @if (item.status === OrderItemStatus.Ready) {
+                      <span class="material-icons text-green-400">check_circle</span>
+                    }
+                  </div>
+                  @if (item.notes) {
+                    <p class="text-sm text-yellow-400 italic mt-1">Obs: {{ item.notes }}</p>
+                  }
+                  <div class="mt-2 flex space-x-2">
+                     <button (click)="restaurantService.updateItemStatus(order.id, item.id, OrderItemStatus.InProgress)" [disabled]="item.status !== OrderItemStatus.Pending" class="text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed">Preparo</button>
+                     <button (click)="restaurantService.updateItemStatus(order.id, item.id, OrderItemStatus.Ready)" [disabled]="item.status === OrderItemStatus.Ready" class="text-xs px-2 py-1 rounded bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed">Pronto</button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Card Footer -->
+            <div class="p-3 bg-gray-800 border-t border-gray-700 flex justify-between items-center">
+              <button (click)="printOrder(order)" class="flex items-center space-x-1 text-sm text-gray-400 hover:text-white">
+                <span class="material-icons text-base">print</span>
+                <span>Imprimir</span>
+              </button>
+              <button (click)="restaurantService.completeOrder(order.id)" [disabled]="!isOrderReady(order)" class="px-4 py-2 font-bold rounded bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200">
+                Finalizar Pedido
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="col-span-full text-center py-16">
+            <span class="material-icons text-6xl text-gray-600">inbox</span>
+            <p class="text-xl text-gray-500 mt-4">Nenhum pedido pendente.</p>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <!-- Recipe Editor View -->
+    <div class="max-w-4xl mx-auto">
+      <div class="flex justify-start mb-4">
+          <button (click)="currentView.set('kds')" 
+              class="px-4 py-2 rounded-md font-semibold transition-all duration-200 flex items-center space-x-2 bg-gray-700 hover:bg-gray-600">
+              <span class="material-icons">arrow_back</span>
+              <span>Voltar para o KDS</span>
+          </button>
+      </div>
+      <div class="bg-gray-800 p-8 rounded-lg shadow-2xl border border-gray-700">
+        <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-4">Editor de Ficha Técnica</h2>
+        
+        <!-- Gemini Suggestion Section -->
+        <div class="bg-gray-900/50 p-4 rounded-lg mb-8 border border-blue-900/50">
+           <h3 class="text-xl font-semibold text-blue-300 mb-2 flex items-center"><span class="material-icons mr-2">auto_awesome</span>Sugestão com IA Gemini</h3>
+           <div class="flex items-center space-x-2 mb-3">
+             <input type="text" [(ngModel)]="geminiPrompt" placeholder="Ex: um hambúrguer apimentado com abacaxi" class="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+             <button (click)="generateSuggestion()" [disabled]="geminiService.loading()" class="px-4 py-2 bg-blue-600 rounded-md font-semibold hover:bg-blue-500 disabled:bg-gray-500 flex items-center">
+                @if (geminiService.loading()) {
+                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Gerando...</span>
+                } @else {
+                  <span>Gerar</span>
+                }
+             </button>
+           </div>
+           @if (geminiSuggestion()) {
+             <div class="bg-gray-700 p-3 rounded-md text-sm whitespace-pre-wrap font-mono">{{ geminiSuggestion() }}</div>
+           }
+        </div>
+
+        <!-- Recipe Form -->
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="recipeName" class="block text-sm font-medium text-gray-300 mb-1">Nome do Prato</label>
+              <input type="text" id="recipeName" [(ngModel)]="newRecipeName" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            </div>
+             <div>
+              <label for="recipeCategory" class="block text-sm font-medium text-gray-300 mb-1">Destino</label>
+              <select id="recipeCategory" [(ngModel)]="newRecipeCategory" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                <option value="Cozinha">Cozinha</option>
+                <option value="Bar">Bar</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="recipeDescription" class="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+            <textarea id="recipeDescription" [(ngModel)]="newRecipeDescription" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"></textarea>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold mb-2">Ingredientes</h3>
+            <div class="space-y-2">
+              @for (ing of newRecipeIngredients(); track $index) {
+                <div class="flex items-center space-x-2 p-2 bg-gray-700/50 rounded">
+                  <select [(ngModel)]="ing.ingredientId" class="flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    @for(availIng of availableIngredients(); track availIng.id) {
+                      <option [value]="availIng.id">{{ availIng.name }}</option>
+                    }
+                  </select>
+                  <input type="number" [(ngModel)]="ing.quantity" placeholder="Qtd" class="w-24 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <span class="w-12 text-gray-400">{{ getIngredientUnit(ing.ingredientId) }}</span>
+                  <button (click)="removeIngredientFromRecipe($index)" class="p-2 text-red-400 hover:bg-red-500/20 rounded-full transition">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </div>
+              }
+              <button (click)="addIngredientToRecipe()" class="w-full mt-2 px-4 py-2 border-2 border-dashed border-gray-600 text-gray-400 rounded-md hover:border-gray-500 hover:text-gray-300 transition flex items-center justify-center">
+                <span class="material-icons mr-2">add</span>Adicionar Ingrediente
+              </button>
+            </div>
+          </div>
+          <div class="flex justify-end pt-4">
+            <button (click)="saveNewRecipe()" class="px-6 py-3 bg-green-600 rounded-md font-bold text-lg hover:bg-green-500 transition-colors duration-200">Salvar Ficha Técnica</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

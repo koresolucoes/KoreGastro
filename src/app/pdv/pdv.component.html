@@ -1,0 +1,87 @@
+<div class="p-4 md:p-6">
+  <h2 class="text-3xl font-bold mb-6 text-blue-300">Mapa de Mesas</h2>
+  
+  <!-- Table Grid -->
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+    @for (table of tables(); track table.number) {
+      <button (click)="selectMesa(table)" [disabled]="table.status !== TableStatus.Free"
+        [class]="'aspect-square rounded-lg border-2 flex flex-col justify-center items-center transition-all duration-200 ' + getTableStatusClass(table.status)">
+        <span class="text-4xl font-bold">{{ table.number }}</span>
+        <span class="text-sm font-semibold mt-1">{{ table.status }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Order Modal -->
+  @if (isModalOpen()) {
+    @if(selectedTable(); as table) {
+      <div class="fixed inset-0 bg-black/70 z-40 flex items-center justify-center p-4" (click)="closeModal()">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-700" (click)="$event.stopPropagation()">
+          
+          <!-- Modal Header -->
+          <header class="p-4 border-b border-gray-700 flex justify-between items-center">
+            <h3 class="text-3xl font-bold text-white">Novo Pedido - Mesa {{ table.number }}</h3>
+            <button (click)="closeModal()" class="p-2 text-gray-400 hover:bg-gray-700 rounded-full transition">
+              <span class="material-icons">close</span>
+            </button>
+          </header>
+
+          <!-- Modal Body -->
+          <div class="flex-grow flex overflow-hidden">
+            <!-- Left Side: Menu -->
+            <div class="w-1/2 p-4 overflow-y-auto">
+              <h4 class="text-xl font-semibold mb-3 text-blue-300">Cardápio</h4>
+              @for(category of menu(); track category.category) {
+                <div class="mb-4">
+                  <h5 class="text-lg font-bold mb-2 text-gray-300">{{ category.category }}</h5>
+                  <div class="space-y-2">
+                    @for(item of category.items; track item.id) {
+                      <button (click)="addItemToOrder(item)" class="w-full text-left p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition">
+                        <p class="font-semibold">{{ item.name }}</p>
+                        <p class="text-sm text-gray-400">{{ item.description }}</p>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Right Side: Current Order -->
+            <div class="w-1/2 p-4 bg-gray-900/50 flex flex-col border-l border-gray-700">
+              <h4 class="text-xl font-semibold mb-3 text-blue-300">Comanda</h4>
+              <div class="flex-grow overflow-y-auto space-y-2">
+                @for (item of currentOrderItems(); track item.recipeId) {
+                  <div class="flex items-center justify-between p-2 bg-gray-700 rounded-md">
+                    <div>
+                       <p class="font-semibold">{{ item.name }}</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <button (click)="removeItem(item.recipeId)" class="px-2 py-0.5 bg-red-600 rounded">-</button>
+                      <span class="font-mono w-4 text-center">{{ item.quantity }}</span>
+                      <button (click)="incrementItemInOrder(item.recipeId)" class="px-2 py-0.5 bg-green-600 rounded">+</button>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="flex flex-col items-center justify-center h-full text-gray-500">
+                    <span class="material-icons text-5xl">menu_open</span>
+                    <p>Selecione itens do cardápio</p>
+                  </div>
+                }
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Modal Footer -->
+          <footer class="p-4 border-t border-gray-700 flex justify-end">
+            <button (click)="submitOrder()" [disabled]="currentOrderItems().length === 0" 
+              class="px-8 py-3 bg-blue-600 rounded-lg font-bold text-lg hover:bg-blue-500 transition disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center space-x-2">
+              <span class="material-icons">send</span>
+              <span>Enviar para Produção</span>
+            </button>
+          </footer>
+        </div>
+      </div>
+    }
+  }
+</div>

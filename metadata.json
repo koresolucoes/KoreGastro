@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Gestão para Restaurantes",
+  "description": "Um sistema de gestão completo para restaurantes, incluindo módulos de Ponto de Venda (PDV), Sistema de Exibição de Cozinha (KDS), gestão de fichas técnicas e muito mais. Projetado para ser modular e escalável.",
+  "requestFramePermissions": []
+}
